@@ -1,0 +1,221 @@
+---
+title: "Data_visualisation"
+author: "Jakob Mørup"
+date: "10/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#loading Packages
+```{r}
+library(pacman)
+p_load(tidyverse,
+       jsonlite,
+       sf,
+       raster,
+       leaflet,
+       shiny,
+       leaflet.extras)
+
+```
+
+
+
+
+#Loading and preprocessing the BBR data, and turning the point data into plotable datatypes using the sf package
+```{r}
+#Importing the data from the JSON file it is
+bbr_cph_data <- fromJSON("outputs/clean_BBR_cph_data.json")
+bbr_aarhus_data <- fromJSON("outputs/clean_BBR_aarhus_data.json")
+
+
+
+#flattening it to a data frame and changing the name of a column to get rid of danish letters
+flatten <- function(json){
+  json <- as.data.frame(json[["BygningList"]])
+  names(json)[names(json)=="byg026Opførelsesår"] <- "byg026Year"
+  return(json)
+}
+
+
+#filtering for buildings used for recreational,educational,habitation,health, light- and service industry out discarding other buildings, refer to BBRkodelister20210322 for the complete list of codes
+
+clean_bbr_df <-function(df, year_cutoff){
+  df %>% 
+  filter(!is.na(byg404Koordinat)) %>% 
+  filter(byg404Koordinat != "POINT(0 0)") %>% 
+  filter(byg406Koordinatsystem == "5") %>% 
+  filter(!is.na(byg026Year)) %>% 
+  filter(byg021BygningensAnvendelse %in% 
+           c("101","120","121","122","131","132","140","150","160","190","321","322","324","331","332","333","334","339","421","422","429","431","432","433","439","441","532","533")) %>% 
+  distinct(id_lokalId,.keep_all = TRUE) %>% 
+  filter(byg026Year >= year_cutoff)
+}
+
+
+bbr_cph_data_flat <- bbr_cph_data %>%
+  flatten() %>% 
+  clean_bbr_df(year_cutoff = 1900) %>% 
+  mutate(city = "Copenhagen")%>% 
+  st_as_sf(wkt = "byg404Koordinat", crs = 25832)
+
+bbr_aarhus_data_flat <-bbr_aarhus_data %>%
+  flatten() %>% 
+  clean_bbr_df(1900) %>% 
+  mutate(city = "Aarhus")%>% 
+  st_as_sf(wkt = "byg404Koordinat", crs = 25832)
+
+
+
+merged_bbr_data_flat <- rbind(bbr_cph_data %>%
+  flatten() %>% 
+  clean_bbr_df(year_cutoff = 1900) %>% 
+  mutate(city = "Copenhagen"), bbr_aarhus_data %>%
+  flatten() %>% 
+  clean_bbr_df(1900) %>% 
+  mutate(city = "Aarhus")) %>% 
+  st_as_sf(wkt = "byg404Koordinat", crs = 25832)
+
+```
+
+#loading distric geoJSONs to get mappable district polygons
+```{r}
+
+cph_districts <- st_read("data/cph_districts.geojson")
+aarhus_districts <- st_read("data/aarhus_districts.geojson")
+
+cph_districts
+aarhus_districts
+merged_districts <- rbind(aarhus_districts %>% 
+                            dplyr::select(navn = prog_distrikt_navn,geometry) %>% 
+                            mutate(city = "Aarhus"),
+                          cph_districts %>% 
+                            dplyr::select(navn,geometry) %>% 
+                            mutate(city = "Copenhagen")
+                          )
+```
+
+# Creating dataframes for intersections of the district polygons and the point data from BBR
+```{r}
+intersections_aarhus <- st_intersection(aarhus_districts,bbr_aarhus_data_flat) %>% 
+  dplyr::select(id = id_lokalId, navn = prog_distrikt_navn,byg021BygningensAnvendelse,byg026Year,byg054AntalEtager,byg406Koordinatsystem,city,geometry)
+intersections_cph <-  st_intersection(cph_districts,bbr_cph_data_flat) %>% 
+  dplyr::select(id = id_lokalId,navn, byg021BygningensAnvendelse,byg026Year,byg054AntalEtager,byg406Koordinatsystem,city,geometry)
+
+intersections_merged <- rbind(intersections_aarhus, intersections_cph)
+
+
+```
+
+
+#Creating choropleth overlays on basemaps from OpenStreetMaps, showing the number of new buildings by districs in a given year or range of years
+
+```{r}
+#proj4def = 'EPSG:25832', "+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"
+
+
+#A function that takes a data frame input and a year value (that can be a list/range of values) and returns a subset of the data frame where the year is in the input year(s)
+get_year_df <- function(df,year){
+temp_df <- df %>% 
+  filter(byg026Year %in% year)
+    return(temp_df)
+}
+
+#A function that adds a new column to the merged districts with counts of new buildings in each districts in that/those year(s) given a range of years, from the intersections data frame and returns the new dataframe
+n_new_buildings <- function(year){
+  n_new <- rep(0,length(merged_districts$navn))
+  intersections_year <- get_year_df(intersections_merged, year)
+  for (i in 1:length(merged_districts$navn)){
+    n_new[i] <- nrow(filter(intersections_year, navn == merged_districts$navn[i]))
+  }
+
+  temp <- cbind(merged_districts, n_new)
+  return(temp)
+}
+
+
+#temp_df <- get_year_df(intersections_merged, c(1940:1945))
+temp_df_choropleth <- n_new_buildings(c(1975:1985))
+
+
+
+#map <- leaflet() %>%
+#  addTiles() %>% 
+#  #addGeoJSON(st_transform(aarhus_districts$geometry,4326))%>% 
+#  addPolygons(data = st_transform(aarhus_districts$geometry,4326))%>% 
+#  addCircleMarkers(data = st_transform(temp_df,4326), 
+#                   clusterOptions = markerClusterOptions())
+#  
+#
+#map
+
+
+
+#creating a color palette
+pal <- colorNumeric("Greens", domain = NULL)
+
+#creating labels for the choropleth map
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g Nye bygninger</sup>",
+  temp_df_choropleth$navn, temp_df_choropleth$n_new
+) %>% lapply(htmltools::HTML)
+
+
+#drawing the choropleth map on top of OpenStreetMaps base map
+choro <- leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = st_transform(temp_df_choropleth,4326),
+                      fillColor = pal(temp_df_choropleth$n_new),
+                      weight = 1,
+                      opacity = 1,
+                      color = "white",
+                      dashArray = "3",
+                      fillOpacity = 0.7,
+                      highlightOptions = highlightOptions(
+                        weight = 5,
+                        color = "#666",
+                        dashArray = "",
+                        fillOpacity = 0.7,
+                        bringToFront = TRUE),
+                      label = labels,
+                      labelOptions = labelOptions(
+                        style = list("font-weight" = "normal", padding = "3px 8px"),
+                        textsize = "15px",
+                        direction = "auto")) %>% 
+  addLegend(
+    data = temp_df_choropleth,
+    position = "bottomright",
+    pal = pal,
+    values = ~ n_new,
+    title = "Antal nye bygninger",
+    opacity = 0.5)
+
+
+choro
+
+
+
+
+```
+
+
+
+```{r}
+
+temp_df_histogram_aarhus <- 
+  get_year_df(intersections_aarhus, c(1930:1990)) %>%
+  dplyr::select(byg026Year, byg054AntalEtager) %>% 
+  group_by(byg026Year) %>% 
+  summarise_at(vars(byg054AntalEtager),funs(mean(., na.rm =TRUE)))
+  
+
+  ggplot(temp_df_histogram_aarhus,aes(x = byg026Year, y= byg054AntalEtager))+
+    geom_col()
+  
+
+
+```
+
