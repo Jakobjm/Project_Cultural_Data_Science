@@ -18,7 +18,8 @@ p_load(tidyverse,
        raster,
        leaflet,
        shiny,
-       leaflet.extras)
+       leaflet.extras,
+       ggpattern)
 
 ```
 
@@ -203,6 +204,8 @@ choro
 
 
 
+## making Histograms of average building height measured in floors.
+
 ```{r}
 
 temp_df_histogram_aarhus <- 
@@ -213,7 +216,9 @@ temp_df_histogram_aarhus <-
   
 
   ggplot(temp_df_histogram_aarhus,aes(x = byg026Year, y= byg054AntalEtager))+
-    geom_col()
+    geom_col(fill = "#76EE00", color = "black")+
+    labs(x= "Years", y= "Mean heigth in floors")+
+    theme_minimal()
   
 
 
