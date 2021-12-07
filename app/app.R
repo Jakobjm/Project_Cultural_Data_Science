@@ -200,7 +200,7 @@ ui <- fluidPage(
     mainPanel(
       
       # Output: Histogram ----
-      leafletOutput("Map")
+      leafletOutput("Map", height = 1000)
       
     )
     
