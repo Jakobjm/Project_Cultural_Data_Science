@@ -105,11 +105,13 @@ merged_bbr_data_flat <- rbind(bbr_cph_data %>%
   st_as_sf(wkt = "byg404Koordinat", crs = 25832)
 
 #loading DIstrict geometry
-cph_districts <- st_read("data/cph_districts.geojson")
-aarhus_districts <- st_read("data/aarhus_districts.geojson")
+#cph_districts <- st_read("data/cph_districts.geojson")
+#aarhus_districts <- st_read("data/aarhus_districts.geojson")
 
-cph_districts
-aarhus_districts
+cph_districts <- st_read("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/cph_districts.geojson")
+aarhus_districts <- st_read("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/aarhus_districts.geojson")
+
+
 merged_districts <- rbind(aarhus_districts %>% 
                             dplyr::select(navn = prog_distrikt_navn,geometry) %>% 
                             mutate(city = "Aarhus"),
