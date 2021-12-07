@@ -137,22 +137,9 @@ n_new_buildings <- function(year){
   return(temp)
 }
 
-
-#temp_df <- get_year_df(intersections_merged, c(1940:1945))
-temp_df_choropleth <- n_new_buildings(c(1975:1985))
-
-
-
-#map <- leaflet() %>%
-#  addTiles() %>% 
-#  #addGeoJSON(st_transform(aarhus_districts$geometry,4326))%>% 
-#  addPolygons(data = st_transform(aarhus_districts$geometry,4326))%>% 
-#  addCircleMarkers(data = st_transform(temp_df,4326), 
-#                   clusterOptions = markerClusterOptions())
-#  
-#
-#map
-
+#Function that takes a year range and creates a choropleth map from it, based on BBR data and district geometry
+draw_choropleth <- function(year){
+temp_df_choropleth <- n_new_buildings(year = year)
 
 
 #creating a color palette
@@ -195,10 +182,10 @@ choro <- leaflet() %>%
     opacity = 0.5)
 
 
-choro
+return(choro)
+}
 
-
-
+draw_choropleth(c(1990:1991))
 
 ```
 
@@ -207,20 +194,22 @@ choro
 ## making Histograms of average building height measured in floors.
 
 ```{r}
-
-temp_df_histogram_aarhus <- 
-  get_year_df(intersections_aarhus, c(1930:1990)) %>%
+plot_hist <- function(Year, df){
+temp_df_histogram <- 
+  get_year_df(df, Year) %>%
   dplyr::select(byg026Year, byg054AntalEtager) %>% 
   group_by(byg026Year) %>% 
   summarise_at(vars(byg054AntalEtager),funs(mean(., na.rm =TRUE)))
   
 
-  ggplot(temp_df_histogram_aarhus,aes(x = byg026Year, y= byg054AntalEtager))+
+  ggplot(temp_df_histogram,aes(x = byg026Year, y= byg054AntalEtager))+
     geom_col(fill = "#76EE00", color = "black")+
     labs(x= "Years", y= "Mean heigth in floors")+
+    ggtitle(paste(df$city[1]))+
     theme_minimal()
-  
+}
 
+plot_hist(c(1990:1999), intersections_aarhus)
 
 ```
 
