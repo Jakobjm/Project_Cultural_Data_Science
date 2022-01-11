@@ -40,6 +40,7 @@ plot_hist <- function(Year, df){
   
   ggplot(temp_df_histogram,aes(x = byg026Year, y= byg054AntalEtager))+
     geom_col(fill = "#76EE00", color = "black")+
+    coord_cartesian(ylim = c(1,5))+
     labs(x= "Years", y= "Mean heigth in floors")+
     ggtitle(paste(df$city[1]))+
     theme_minimal()
@@ -76,9 +77,13 @@ clean_bbr_df <-function(df, year_cutoff){
 
 #Loading and using functions to preprocess BBR data
 
-bbr_cph_data <- fromJSON("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/clean_BBR_cph_data.json")
-bbr_aarhus_data <- fromJSON("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/clean_BBR_aarhus_data.json")
+#UNCOMMENT THIS IF YOU WANT TO PULL DATA FROM SCIENCEDATA.DK
+#bbr_cph_data <- fromJSON("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/clean_BBR_cph_data.json")
+#bbr_aarhus_data <- fromJSON("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/clean_BBR_aarhus_data.json")
 
+#COMMENT THE BELOW TWO LINES OUT IF YOU'RE USING DATA HOSTED ON SCIENCEDATA.DK
+bbr_cph_data <- fromJSON("../data/clean_BBR_cph_data.json")
+bbr_aarhus_data <- fromJSON("../data/clean_BBR_aarhus_data.json")
 
 
 bbr_cph_data_flat <- bbr_cph_data %>%
@@ -104,12 +109,17 @@ merged_bbr_data_flat <- rbind(bbr_cph_data %>%
                                 mutate(city = "Aarhus")) %>% 
   st_as_sf(wkt = "byg404Koordinat", crs = 25832)
 
-#loading DIstrict geometry
-#cph_districts <- st_read("data/cph_districts.geojson")
-#aarhus_districts <- st_read("data/aarhus_districts.geojson")
 
-cph_districts <- st_read("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/cph_districts.geojson")
-aarhus_districts <- st_read("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/aarhus_districts.geojson")
+
+
+#UNCOMMENT THIS IF YOU WANT TO PULL DATA FROM SCIENCEDATA.DK
+#cph_districts <- st_read("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/cph_districts.geojson")
+#aarhus_districts <- st_read("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/aarhus_districts.geojson")
+
+
+#COMMENT THE BELOW TWO LINES OUT IF YOU'RE USING DATA HOSTED ON SCIENCEDATA.DK
+cph_districts <- st_read("../data/cph_districts.geojson")
+aarhus_districts <- st_read("../data/aarhus_districts.geojson")
 
 
 merged_districts <- rbind(aarhus_districts %>% 

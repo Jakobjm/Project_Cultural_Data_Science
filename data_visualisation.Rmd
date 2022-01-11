@@ -28,7 +28,12 @@ p_load(tidyverse,
 
 #Loading and preprocessing the BBR data, and turning the point data into plotable datatypes using the sf package
 ```{r}
+#UNCOMMENT THIS IF YOU WANT TO PULL DATA FROM SCIENCEDATA.DK
+#bbr_cph_data <- fromJSON("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/clean_BBR_cph_data.json")
+#bbr_aarhus_data <- fromJSON("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/clean_BBR_aarhus_data.json")
+
 #Importing the data from the JSON file it is
+#COMMENT THE BELOW TWO LINES OUT IF YOU'RE USING DATA HOSTED ON SCIENCEDATA.DK
 bbr_cph_data <- fromJSON("outputs/clean_BBR_cph_data.json")
 bbr_aarhus_data <- fromJSON("outputs/clean_BBR_aarhus_data.json")
 
@@ -85,6 +90,12 @@ merged_bbr_data_flat <- rbind(bbr_cph_data %>%
 #loading distric geoJSONs to get mappable district polygons
 ```{r}
 
+#UNCOMMENT THIS IF YOU WANT TO PULL DATA FROM SCIENCEDATA.DK
+#cph_districts <- st_read("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/cph_districts.geojson")
+#aarhus_districts <- st_read("https://sciencedata.dk/public/67e2ad2ca642562dacfa6fdf672a1009/aarhus_districts.geojson")
+
+
+#COMMENT THE BELOW TWO LINES OUT IF YOU'RE USING DATA HOSTED ON SCIENCEDATA.DK
 cph_districts <- st_read("data/cph_districts.geojson")
 aarhus_districts <- st_read("data/aarhus_districts.geojson")
 
